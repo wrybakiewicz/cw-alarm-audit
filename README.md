@@ -64,3 +64,9 @@ Use `--json` for structured output.
 * no alarm changes
 * no auto-fixing
 * no dashboards
+
+## Feedback
+
+If you've run into similar issues or have ideas for improvements, feel free to open an issue or reach out.
+
+Email: wojtekrybakiewicz@proton.me
