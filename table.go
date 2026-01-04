@@ -56,18 +56,23 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 		"LAST CHANGED",
 	})
 
-	// Calculate name column width
-	nameWidth := 60
-	if fullNames {
-		maxLen := 0
-		for _, r := range rows {
-			if len(r.Name) > maxLen {
-				maxLen = len(r.Name)
-			}
+	// Calculate name column width - make it as narrow as possible
+	// based on the longest alarm name, with a reasonable max limit
+	maxLen := 0
+	for _, r := range rows {
+		if len(r.Name) > maxLen {
+			maxLen = len(r.Name)
 		}
-		if maxLen > 60 {
-			nameWidth = maxLen + 10
-		}
+	}
+	// Use the longest name length, but cap at a reasonable maximum (e.g., 80)
+	const maxWidth = 80
+	nameWidth := maxLen + 2 // Add small padding
+	if nameWidth > maxWidth {
+		nameWidth = maxWidth
+	}
+	// Ensure minimum width for readability
+	if nameWidth < 20 {
+		nameWidth = 20
 	}
 
 	// Configure column alignments and widths
