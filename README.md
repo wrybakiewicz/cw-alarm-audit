@@ -30,6 +30,7 @@ It identifies CloudWatch alarms that:
 - have no alarm actions configured
 - have alarm actions disabled
 - stay in **ALARM** or **INSUFFICIENT_DATA** state longer than a given threshold
+- frequently change state (noisy/flapping alarms) within a time window
 
 The output is intended as a **starting point for human review**.
 
@@ -89,19 +90,39 @@ Scan for commonly broken alarms across all regions:
 ./cw-alarm-audit --no-actions --actions-disabled
 ```
 
+```bash
+# Alarms that frequently change state (noisy/flapping alarms)
+# Shows alarms with at least 5 state changes in the last 24 hours
+./cw-alarm-audit --noisy
+```
+
+```bash
+# Custom noisy alarm detection (10 changes in 48 hours)
+./cw-alarm-audit --noisy --noisy-window=48h --noisy-min-flaps=10
+```
+
 ---
 
 ## Example output
 
+Standard output:
 ```
 REGION     | ALARM_NAME       | STATE   | ENABLED | ALARM_ACTIONS | OK_ACTIONS | INSUFFICIENT_ACTIONS | LAST_CHANGED
 eu-west-1  | api-5xx-errors   | ALARM   | false   | 0             | 0          | 0                    | 12d ago
 us-east-1  | db-cpu-high      | OK      | true    | 0             | 0          | 0                    | 45d ago
 ```
 
-In this example:
+With `--noisy` flag (shows state flaps count):
+```
+REGION     | ALARM_NAME       | STATE   | ENABLED | ALARM_ACTIONS | OK_ACTIONS | INSUFFICIENT_ACTIONS | LAST_CHANGED | STATE FLAPS
+eu-west-1  | api-5xx-errors   | ALARM   | false   | 0             | 0          | 0                    | 12d ago      | 8
+us-east-1  | db-cpu-high      | OK      | true    | 0             | 0          | 0                    | 45d ago      | 12
+```
+
+In these examples:
 - `api-5xx-errors` is disabled and has no actions configured
 - `db-cpu-high` is enabled but does not notify anyone
+- Both alarms show their state change count when using `--noisy` flag
 
 ---
 
@@ -110,6 +131,7 @@ In this example:
 The tool only requires read-only access:
 
 - `cloudwatch:DescribeAlarms`
+- `cloudwatch:DescribeAlarmHistory` (required when using `--noisy`)
 - `ec2:DescribeRegions`
 
 ---
