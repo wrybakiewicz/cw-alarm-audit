@@ -21,6 +21,8 @@ They get ignored, silenced, or left broken.
 
 This tool helps you find those alarms.
 
+In practice, these issues often surface during alerting reviews or incident retrospectives, not during initial setup.
+
 ---
 
 ## What this tool does
@@ -40,7 +42,7 @@ The output is intended as a **starting point for human review**.
 
 - It does not decide if an alarm is correct
 - It does not modify alarms
-- It does not solve alert noise or threshold tuning
+- It does not fix alert noise or perform threshold tuning
 
 If many alarms are flagged, the problem is usually process-related (e.g. ownership or reviews), not CloudWatch itself.
 
