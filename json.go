@@ -26,7 +26,7 @@ func printJSON(rows []row, totalCount int, opts filterOptions) {
 			lastChangedISO = r.StateUpdatedTimestamp.Format(time.RFC3339)
 		}
 
-		alarms = append(alarms, alarmJSON{
+		alarm := alarmJSON{
 			Region:         r.Region,
 			Name:           r.Name,
 			State:          r.State,
@@ -36,7 +36,12 @@ func printJSON(rows []row, totalCount int, opts filterOptions) {
 			InsufActions:   r.InsufActions,
 			LastChanged:    lastChanged,
 			LastChangedISO: lastChangedISO,
-		})
+		}
+		// Only include StateFlaps if noisy mode is enabled or if flaps count > 0
+		if opts.noisy || r.StateFlapsCount > 0 {
+			alarm.StateFlaps = r.StateFlapsCount
+		}
+		alarms = append(alarms, alarm)
 	}
 
 	output := outputJSON{

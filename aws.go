@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 )
 
@@ -65,6 +66,38 @@ func resolveRegions(ctx context.Context, cfg aws.Config, regionsCSV string) ([]s
 	return rs, nil
 }
 
+// getAlarmStateFlapsCount retrieves the number of state changes for an alarm within a time window
+func getAlarmStateFlapsCount(ctx context.Context, cwc *cloudwatch.Client, alarmName string, window time.Duration) (int, error) {
+	now := time.Now()
+	startTime := now.Add(-window)
+
+	var totalFlaps int
+	var nextToken *string
+
+	for {
+		resp, err := cwc.DescribeAlarmHistory(ctx, &cloudwatch.DescribeAlarmHistoryInput{
+			AlarmName:       aws.String(alarmName),
+			StartDate:       aws.Time(startTime),
+			EndDate:         aws.Time(now),
+			HistoryItemType: types.HistoryItemTypeStateUpdate,
+			NextToken:       nextToken,
+			MaxRecords:      aws.Int32(100),
+		})
+		if err != nil {
+			return 0, err
+		}
+
+		totalFlaps += len(resp.AlarmHistoryItems)
+
+		nextToken = resp.NextToken
+		if nextToken == nil || *nextToken == "" {
+			break
+		}
+	}
+
+	return totalFlaps, nil
+}
+
 // scanRegion scans CloudWatch alarms in a specific region
 func scanRegion(ctx context.Context, cfg aws.Config, region, namePrefix string) ([]row, error) {
 	rcfg := cfg
@@ -103,6 +136,7 @@ func scanRegion(ctx context.Context, cfg aws.Config, region, namePrefix string) 
 				OKActions:             len(a.OKActions),
 				InsufActions:          len(a.InsufficientDataActions),
 				StateUpdatedTimestamp: stateUpdated,
+				StateFlapsCount:       0, // Will be populated later if noisy mode is enabled
 			})
 		}
 
@@ -112,4 +146,31 @@ func scanRegion(ctx context.Context, cfg aws.Config, region, namePrefix string) 
 		}
 	}
 	return out, nil
+}
+
+// enrichRowsWithFlapsCount enriches rows with state flaps count for noisy detection
+func enrichRowsWithFlapsCount(ctx context.Context, cfg aws.Config, rows []row, window time.Duration) {
+	// Group rows by region to batch API calls
+	rowsByRegion := make(map[string][]*row)
+	for i := range rows {
+		region := rows[i].Region
+		rowsByRegion[region] = append(rowsByRegion[region], &rows[i])
+	}
+
+	// Process each region
+	for region, regionRows := range rowsByRegion {
+		rcfg := cfg
+		rcfg.Region = region
+		cwc := cloudwatch.NewFromConfig(rcfg)
+
+		// Get flaps count for each alarm in this region
+		for _, r := range regionRows {
+			flaps, err := getAlarmStateFlapsCount(ctx, cwc, r.Name, window)
+			if err != nil {
+				// If we can't get history, leave flaps count at 0
+				continue
+			}
+			r.StateFlapsCount = flaps
+		}
+	}
 }

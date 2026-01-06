@@ -31,6 +31,9 @@ type filterOptions struct {
 	noActions       bool
 	actionsDisabled bool
 	stale           time.Duration
+	noisy           bool
+	noisyWindow     time.Duration
+	noisyMinFlaps   int
 }
 
 // applyFilters applies all filters to the rows and returns filtered results
@@ -66,6 +69,13 @@ func applyFilters(rows []row, opts filterOptions) []row {
 			}
 			timeSinceUpdate := now.Sub(*r.StateUpdatedTimestamp)
 			if timeSinceUpdate < opts.stale {
+				continue
+			}
+		}
+
+		// Filter by noisy (flapping alarms)
+		if opts.noisy {
+			if r.StateFlapsCount < opts.noisyMinFlaps {
 				continue
 			}
 		}
@@ -139,6 +149,9 @@ func getFilterReasons(opts filterOptions) []string {
 	}
 	if opts.stale > 0 {
 		reasons = append(reasons, fmt.Sprintf("--stale=%v", opts.stale))
+	}
+	if opts.noisy {
+		reasons = append(reasons, fmt.Sprintf("--noisy (window=%v, min-flaps=%d)", opts.noisyWindow, opts.noisyMinFlaps))
 	}
 	return reasons
 }

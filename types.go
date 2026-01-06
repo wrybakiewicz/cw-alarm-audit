@@ -12,6 +12,7 @@ type row struct {
 	OKActions             int
 	InsufActions          int
 	StateUpdatedTimestamp *time.Time
+	StateFlapsCount       int // Number of state changes in the noisy window
 }
 
 // alarmJSON represents an alarm in JSON output format
@@ -25,6 +26,7 @@ type alarmJSON struct {
 	InsufActions   int    `json:"insufficient_actions"`
 	LastChanged    string `json:"last_changed"`
 	LastChangedISO string `json:"last_changed_iso,omitempty"`
+	StateFlaps     int    `json:"state_flaps,omitempty"` // Number of state changes in the noisy window
 }
 
 // outputJSON represents the complete JSON output structure

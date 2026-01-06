@@ -45,7 +45,7 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 	t.Style().Color.RowAlternate = []text.Color{text.FgWhite}
 
 	// Configure columns with descriptive headers
-	t.AppendHeader(table.Row{
+	headerRow := table.Row{
 		"REGION",
 		"ALARM_NAME",
 		"STATE",
@@ -54,7 +54,11 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 		"OK ACTIONS",
 		"INSUFFICIENT ACTIONS",
 		"LAST CHANGED",
-	})
+	}
+	if opts.noisy {
+		headerRow = append(headerRow, "STATE FLAPS")
+	}
+	t.AppendHeader(headerRow)
 
 	// Calculate name column width - make it as narrow as possible
 	// based on the longest alarm name, with a reasonable max limit
@@ -76,7 +80,7 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 	}
 
 	// Configure column alignments and widths
-	t.SetColumnConfigs([]table.ColumnConfig{
+	columnConfigs := []table.ColumnConfig{
 		{Number: 1, Align: text.AlignLeft, WidthMax: 15},
 		{Number: 2, Align: text.AlignLeft, WidthMax: nameWidth, WidthMin: nameWidth},
 		{Number: 3, Align: text.AlignLeft, WidthMax: 18},
@@ -85,7 +89,11 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 		{Number: 6, Align: text.AlignRight, WidthMax: 11}, // OK ACTIONS
 		{Number: 7, Align: text.AlignRight, WidthMax: 20}, // INSUFFICIENT ACTIONS
 		{Number: 8, Align: text.AlignLeft, WidthMax: 13},  // LAST CHANGED
-	})
+	}
+	if opts.noisy {
+		columnConfigs = append(columnConfigs, table.ColumnConfig{Number: 9, Align: text.AlignRight, WidthMax: 8}) // FLAPS
+	}
+	t.SetColumnConfigs(columnConfigs)
 
 	// Add rows with color coding for problematic alarms
 	now := time.Now()
@@ -129,7 +137,7 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 			}
 		}
 
-		t.AppendRow(table.Row{
+		rowData := table.Row{
 			r.Region,
 			alarmName,
 			state,
@@ -138,7 +146,15 @@ func printTable(rows []row, totalCount int, opts filterOptions, fullNames bool) 
 			fmt.Sprintf("%d", r.OKActions),
 			fmt.Sprintf("%d", r.InsufActions),
 			lastChanged,
-		})
+		}
+		if opts.noisy {
+			flapsText := fmt.Sprintf("%d", r.StateFlapsCount)
+			if r.StateFlapsCount >= opts.noisyMinFlaps {
+				flapsText = text.FgYellow.Sprint(flapsText)
+			}
+			rowData = append(rowData, flapsText)
+		}
+		t.AppendRow(rowData)
 	}
 
 	// Render table
