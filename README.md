@@ -57,7 +57,7 @@ https://github.com/wrybakiewicz/cw-alarm-audit/releases
 Example (macOS, Apple Silicon):
 
 ```bash
-curl -L https://github.com/wrybakiewicz/cw-alarm-audit/releases/download/v1.0.0/cw-alarm-audit_1.0.0_darwin_arm64.tar.gz -o cw-alarm-audit.tar.gz
+curl -L https://github.com/wrybakiewicz/cw-alarm-audit/releases/download/v1.1.0/cw-alarm-audit_1.1.0_darwin_arm64.tar.gz -o cw-alarm-audit.tar.gz
 tar -xzf cw-alarm-audit.tar.gz
 chmod +x cw-alarm-audit
 ./cw-alarm-audit
